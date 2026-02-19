@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * ======================
+ * USER MODEL
+ * =======================
+ */
+model User {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  email          String     @unique
+  username       String     @default("")
+  phoneNumber    String     @default("")
+  password       String     @default("")
+  region         String     @default("")
+  country        String     @default("")
+  role           UserRole   @default(USER)
+  userStatus     UserStatus @default(ACTIVE)
+  fcmToken       String?    @default("")
+  dob            DateTime?
+  image          String     @default("")
+  expirationOtp  DateTime?
+  otp            Int?
+  isNotification Boolean    @default(true)
+  status         UserStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  isGoogleAuth   Boolean    @default(false)
+  lastLogin      DateTime?  @default(now())
+
+  notifications Notification[] @relation("UserRelation")
+
+  // Relations
+  messagesSent     Message[]  @relation("SentMessages")
+  messagesReceived Message[]  @relation("ReceivedMessages")
+  rooms            RoomUser[]
+  callsMade        Call[]     @relation("CallCaller")
+  callsReceived    Call[]     @relation("CallReceiver")
+
+  courses     Course[]         @relation("InstructorCourses")
+  enrollments Enrollment[]
+  progress    LessonProgress[]
+  reviews     Review[]
+
+  @@map("users")
+}
+
+/**
+ * ======================
+ * COURSE
+ * ======================
+ */
+
+model Course {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  slug         String       @unique
+  description  String
+  price        Float
+  thumbnailUrl String?
+  status       CourseStatus @default(DRAFT)
+  isDeleted    Boolean      @default(false)
+
+  instructorId String @db.ObjectId
+  instructor   User   @relation("InstructorCourses", fields: [instructorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  reviews     Review[]
+
+  @@map("courses")
+}
+
+/**
+ * ======================
+ * LESSON
+ * ======================
+ */
+
+model Lesson {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  videoUrl  String?
+  order     Int
+  duration  Int? // seconds
+  isPreview Boolean @default(false)
+
+  courseId String @db.ObjectId
+  course   Course @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  progress LessonProgress[]
+
+  @@map("lessons")
+}
+
+/**
+ * ======================
+ * ENROLLMENT
+ * ======================
+ */
+
+model Enrollment {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String           @db.ObjectId
+  courseId  String           @db.ObjectId
+  progress  Float            @default(0)
+  status    EnrollmentStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+/**
+ * ======================
+ * LESSON PROGRESS
+ * ======================
+ */
+
+model LessonProgress {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  studentId   String    @db.ObjectId
+  lessonId    String    @db.ObjectId
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  student User   @relation(fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@map("lesson_progress")
+}
+
+/**
+ * ======================
+ * REVIEW
+ * ======================
+ */
+
+model Review {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  rating  Int
+  comment String?
+
+  studentId String @db.ObjectId
+  courseId  String @db.ObjectId
+
+  student User   @relation(fields: [studentId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+  @@map("reviews")
+}
+
+/**
+ * ======================
+ * STAFF
+ * ======================
+ */
+model Staff {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  serviceType   String
+  dailyCapacity Int
+  status        StaffStatus
+
+  appointments Appointment[]
+}
+
+enum StaffStatus {
+  AVAILABLE
+  ON_LEAVE
+}
+
+model Service {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  duration          Int
+  requiredStaffType String
+
+  appointments Appointment[]
+}
+
+model Appointment {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  customerName String
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id])
+
+  staffId String?
+  staff   Staff?  @relation(fields: [staffId], references: [id])
+
+  appointmentDate DateTime
+  startTime       String
+  endTime         String
+  status          AppointmentStatus
+  createdAt       DateTime          @default(now())
+
+  queues Queue[]
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  WAITING
+}
+
+/**
+ * ======================
+ * QUEUE
+ * ======================
+ */
+model Queue {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  position  Int
+  createdAt DateTime @default(now())
+
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+/**
+ * ======================
+ * ACTIVITY LOG
+ * =======================
+ */
+
+model ActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  message   String
+  createdAt DateTime @default(now())
+}
+
+/**
+ * ======================
+ * NOTIFICATION
+ * =======================
+ */
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  body      String
+  data      String?  @default("")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("UserRelation", fields: [userId], references: [id], onDelete: NoAction)
+
+  @@map("notifications")
+}
+
+/// ======================
+/// ROOM
+/// ======================
+model Room {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String?
+  type      RoomType @default(DIRECT) // DIRECT | GROUP
+  createdAt DateTime @default(now())
+
+  // Members (explicit many-to-many)
+  roomUsers RoomUser[]
+
+  messages Message[]
+  calls    Call[]
+}
+
+/// ======================
+/// ROOM USER (join table for Room <-> User)
+/// ======================
+model RoomUser {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  roomId String @db.ObjectId
+  userId String @db.ObjectId
+
+  room Room @relation(fields: [roomId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+}
+
+/// ======================
+/// MESSAGE
+/// ======================
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  createdAt DateTime @default(now())
+
+  senderId   String
+  receiverId String? // Only for 1-to-1 chat
+  roomId     String
+
+  // Relations
+  sender   User  @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User? @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  room     Room  @relation(fields: [roomId], references: [id])
+}
+
+/// ======================
+/// CALL
+/// ======================
+model Call {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  callType  CallType
+  status    CallStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  callerId   String
+  receiverId String
+  roomId     String?
+
+  caller   User  @relation("CallCaller", fields: [callerId], references: [id])
+  receiver User  @relation("CallReceiver", fields: [receiverId], references: [id])
+  room     Room? @relation(fields: [roomId], references: [id])
+}
+
+enum RoomType {
+  DIRECT
+  GROUP
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  ENDED
+}
+
+/**
+ * ======================
+ * ENUMS
+ * =======================
+ */
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
