@@ -1,6 +1,6 @@
-export interface CreateCourseInput {
-  title: string;
-  description: string;
-  price: number;
-  thumbnailUrl?: string;
-}
+// export interface CreateCourseInput {
+//   title: string;
+//   description: string;
+//   price: number;
+//   thumbnailUrl?: string;
+// }

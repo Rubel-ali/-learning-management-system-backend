@@ -7,258 +7,146 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * ======================
- * USER MODEL
- * =======================
- */
 model User {
-  id             String     @id @default(auto()) @map("_id") @db.ObjectId
-  email          String     @unique
-  username       String     @default("")
-  phoneNumber    String     @default("")
-  password       String     @default("")
-  region         String     @default("")
-  country        String     @default("")
-  role           UserRole   @default(USER)
-  userStatus     UserStatus @default(ACTIVE)
-  fcmToken       String?    @default("")
-  dob            DateTime?
-  image          String     @default("")
-  expirationOtp  DateTime?
-  otp            Int?
-  isNotification Boolean    @default(true)
-  status         UserStatus @default(ACTIVE)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  isGoogleAuth   Boolean    @default(false)
-  lastLogin      DateTime?  @default(now())
-
-  notifications Notification[] @relation("UserRelation")
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  email                String     @unique
+  username             String     @default("")
+  phoneNumber          String     @default("")
+  password             String     @default("")
+  region               String     @default("")
+  country              String     @default("")
+  currency             String     @default("")
+  role                 UserRole   @default(STUDENT)
+  userStatus           UserStatus @default(ACTIVE)
+  fcmToken             String?    @default("")
+  dob                  DateTime?
+  profileImage         String     @default("")
+  profileUrl           String?
+  audioUrl             String     @default("")
+  videoUrl             String     @default("")
+  expirationOtp        DateTime?
+  otp                  Int?
+  isSubscribed         Boolean    @default(false)
+  permissionVideoCount Int        @default(3)
+  permissionPhotoCount Int        @default(1)
+  videoCount           Int        @default(0)
+  photoCount           Int        @default(0)
+  isNotification       Boolean    @default(true)
+  status               UserStatus @default(ACTIVE)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   // Relations
-  messagesSent     Message[]  @relation("SentMessages")
-  messagesReceived Message[]  @relation("ReceivedMessages")
-  rooms            RoomUser[]
-  callsMade        Call[]     @relation("CallCaller")
-  callsReceived    Call[]     @relation("CallReceiver")
-
-  courses     Course[]         @relation("InstructorCourses")
-  enrollments Enrollment[]
-  progress    LessonProgress[]
-  reviews     Review[]
+  notifications Notification[] @relation("UserRelation")
+  Courses       Courses[]
+  Videos        Videos[]
+  Review        Review[]
+  WatchHistory  WatchHistory[]
+  Enrollment    Enrollment[]
 
   @@map("users")
 }
 
-/**
- * ======================
- * COURSE
- * ======================
- */
+model Courses {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  name             String       @default("")
+  description      String       @default("")
+  thumbnailUrl     String       @default("")
+  price            Float        @default(0)
+  instructorId     String       @db.ObjectId
+  user             User         @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  categoryId       String       @db.ObjectId
+  activeStatus     CourseStatus @default(INACTIVE)
+  level            String       @default("")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  videos           Videos[]
+  review           Review[]
+  likeCount        Int          @default(0)
+  videoCount       Int          @default(0)
+  videoDuration    String       @default("")
+  reviewCount      Int          @default(0)
+  Enrollment       Enrollment[]
+  recommended      Boolean      @default(false)
 
-model Course {
-  id           String       @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  slug         String       @unique
-  description  String
-  price        Float
-  thumbnailUrl String?
-  status       CourseStatus @default(DRAFT)
-  isDeleted    Boolean      @default(false)
-
-  instructorId String @db.ObjectId
-  instructor   User   @relation("InstructorCourses", fields: [instructorId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  lessons     Lesson[]
-  enrollments Enrollment[]
-  reviews     Review[]
+  category Category? @relation(name: "CategoryToCourses", fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@map("courses")
 }
 
-/**
- * ======================
- * LESSON
- * ======================
- */
+model Videos {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  name          String         @default("")
+  title         String         @default("")
+  subTitle      String         @default("")
+  description   String         @default("")
+  thumbnailUrl  String         @default("")
+  videoUrl      String         @default("")
+  instructorId  String         @db.ObjectId
+  user          User           @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  courseId      String         @db.ObjectId
+  course        Courses        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  videoDuration String         @default("")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  serialNo      Int            @default(0)
+  watchHistory  WatchHistory[]
 
-model Lesson {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  title     String
-  content   String
-  videoUrl  String?
-  order     Int
-  duration  Int? // seconds
-  isPreview Boolean @default(false)
-
-  courseId String @db.ObjectId
-  course   Course @relation(fields: [courseId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  progress LessonProgress[]
-
-  @@map("lessons")
+  @@map("videos")
 }
 
-/**
- * ======================
- * ENROLLMENT
- * ======================
- */
+model WatchHistory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  videoId   String   @db.ObjectId
+  watchedAt DateTime @default(now())
 
-model Enrollment {
-  id        String           @id @default(auto()) @map("_id") @db.ObjectId
-  studentId String           @db.ObjectId
-  courseId  String           @db.ObjectId
-  progress  Float            @default(0)
-  status    EnrollmentStatus @default(ACTIVE)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Videos @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+model Category {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String    @default("")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Courses   Courses[] @relation(name: "CategoryToCourses")
+
+  @@map("categories")
+}
+
+model Review {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  rating   Int     @default(0)
+  courseId String  @db.ObjectId
+  userId   String  @db.ObjectId
+  course   Courses @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  student User   @relation(fields: [studentId], references: [id])
-  course  Course @relation(fields: [courseId], references: [id])
+  @@map("reviews")
+}
+
+model Enrollment {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId     String   @db.ObjectId
+  courseId      String   @db.ObjectId
+  paymentId     String   @default("")
+  paymentStatus Boolean  @default(true)
+  status        EnrollmentStatus @default(ACTIVE) // New enrollment tracking
+  student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course        Courses  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([studentId, courseId])
   @@map("enrollments")
 }
 
-/**
- * ======================
- * LESSON PROGRESS
- * ======================
- */
-
-model LessonProgress {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  studentId   String    @db.ObjectId
-  lessonId    String    @db.ObjectId
-  completed   Boolean   @default(false)
-  completedAt DateTime?
-
-  student User   @relation(fields: [studentId], references: [id])
-  lesson  Lesson @relation(fields: [lessonId], references: [id])
-
-  @@unique([studentId, lessonId])
-  @@map("lesson_progress")
-}
-
-/**
- * ======================
- * REVIEW
- * ======================
- */
-
-model Review {
-  id      String  @id @default(auto()) @map("_id") @db.ObjectId
-  rating  Int
-  comment String?
-
-  studentId String @db.ObjectId
-  courseId  String @db.ObjectId
-
-  student User   @relation(fields: [studentId], references: [id])
-  course  Course @relation(fields: [courseId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([studentId, courseId])
-  @@map("reviews")
-}
-
-/**
- * ======================
- * STAFF
- * ======================
- */
-model Staff {
-  id            String      @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  serviceType   String
-  dailyCapacity Int
-  status        StaffStatus
-
-  appointments Appointment[]
-}
-
-enum StaffStatus {
-  AVAILABLE
-  ON_LEAVE
-}
-
-model Service {
-  id                String @id @default(auto()) @map("_id") @db.ObjectId
-  name              String
-  duration          Int
-  requiredStaffType String
-
-  appointments Appointment[]
-}
-
-model Appointment {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  customerName String
-
-  serviceId String?
-  service   Service? @relation(fields: [serviceId], references: [id])
-
-  staffId String?
-  staff   Staff?  @relation(fields: [staffId], references: [id])
-
-  appointmentDate DateTime
-  startTime       String
-  endTime         String
-  status          AppointmentStatus
-  createdAt       DateTime          @default(now())
-
-  queues Queue[]
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-  WAITING
-}
-
-/**
- * ======================
- * QUEUE
- * ======================
- */
-model Queue {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  position  Int
-  createdAt DateTime @default(now())
-
-  appointmentId String      @unique
-  appointment   Appointment @relation(fields: [appointmentId], references: [id])
-}
-
-/**
- * ======================
- * ACTIVITY LOG
- * =======================
- */
-
-model ActivityLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  message   String
-  createdAt DateTime @default(now())
-}
-
-/**
- * ======================
- * NOTIFICATION
- * =======================
- */
 model Notification {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
@@ -268,109 +156,24 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation("UserRelation", fields: [userId], references: [id], onDelete: NoAction)
+  user      User     @relation("UserRelation", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
 
-/// ======================
-/// ROOM
-/// ======================
-model Room {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String?
-  type      RoomType @default(DIRECT) // DIRECT | GROUP
-  createdAt DateTime @default(now())
-
-  // Members (explicit many-to-many)
-  roomUsers RoomUser[]
-
-  messages Message[]
-  calls    Call[]
-}
-
-/// ======================
-/// ROOM USER (join table for Room <-> User)
-/// ======================
-model RoomUser {
-  id     String @id @default(auto()) @map("_id") @db.ObjectId
-  roomId String @db.ObjectId
-  userId String @db.ObjectId
-
-  room Room @relation(fields: [roomId], references: [id])
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([roomId, userId])
-}
-
-/// ======================
-/// MESSAGE
-/// ======================
-model Message {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   String
-  createdAt DateTime @default(now())
-
-  senderId   String
-  receiverId String? // Only for 1-to-1 chat
-  roomId     String
-
-  // Relations
-  sender   User  @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User? @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  room     Room  @relation(fields: [roomId], references: [id])
-}
-
-/// ======================
-/// CALL
-/// ======================
-model Call {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  callType  CallType
-  status    CallStatus @default(PENDING)
-  createdAt DateTime   @default(now())
-  startedAt DateTime?
-  endedAt   DateTime?
-
-  callerId   String
-  receiverId String
-  roomId     String?
-
-  caller   User  @relation("CallCaller", fields: [callerId], references: [id])
-  receiver User  @relation("CallReceiver", fields: [receiverId], references: [id])
-  room     Room? @relation(fields: [roomId], references: [id])
-}
-
-enum RoomType {
-  DIRECT
-  GROUP
-}
-
-enum CallType {
-  AUDIO
-  VIDEO
-}
-
-enum CallStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  ENDED
-}
-
-/**
- * ======================
- * ENUMS
- * =======================
- */
-
 enum UserRole {
-  SUPER_ADMIN
   ADMIN
   INSTRUCTOR
   STUDENT
-  USER
+  SUPER_ADMIN
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum UserStatus {
@@ -379,14 +182,23 @@ enum UserStatus {
   BLOCKED
 }
 
-enum CourseStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum EnrollmentStatus {
   ACTIVE
   COMPLETED
-  CANCELLED
+  DROPPED
+}
+
+enum AdminActionType {
+  APPROVE
+  REJECT
+  DELETE
+  EDIT
+  BAN_USER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RESTICTED
 }

@@ -24,19 +24,19 @@ const createUserIntoDb = async (payload: User) => {
     if (existingUser.email === payload.email) {
       throw new ApiError(
         400,
-        `User with this email ${payload.email} already exists`
+        `User with this email ${payload.email} already exists`,
       );
     }
     if (existingUser.username === payload.username) {
       throw new ApiError(
         400,
-        `User with this username ${payload.username} already exists`
+        `User with this username ${payload.username} already exists`,
       );
     }
   }
   const hashedPassword: string = await bcrypt.hash(
     payload.password,
-    Number(config.bcrypt_salt_rounds)
+    Number(config.bcrypt_salt_rounds),
   );
 
   const result = await prisma.user.create({
@@ -45,7 +45,7 @@ const createUserIntoDb = async (payload: User) => {
       id: true,
       username: true,
       email: true,
-      image: true,
+      profileImage: true,
       role: true,
       status: true,
       phoneNumber: true,
@@ -64,7 +64,7 @@ const createUserIntoDb = async (payload: User) => {
       role: result.role,
     },
     config.jwt.jwt_secret as string,
-    config.jwt.expires_in as string // or number
+    config.jwt.expires_in as string, // or number
   );
 
   return { token: accessToken, result };
@@ -73,7 +73,7 @@ const createUserIntoDb = async (payload: User) => {
 // reterive all users from the database also searcing anf filetering
 const getUsersFromDb = async (
   params: IUserFilterRequest,
-  options: IPaginationOptions
+  options: IPaginationOptions,
 ) => {
   const { page, limit, skip } = paginationHelper.calculatePagination(options);
   const { searchTerm, ...filterData } = params;
@@ -125,7 +125,7 @@ const getUsersFromDb = async (
       id: true,
       username: true,
       email: true,
-      image: true,
+      profileImage: true,
       role: true,
       phoneNumber: true,
       isNotification: true,
@@ -184,7 +184,7 @@ const updateProfile = async (req: Request) => {
       username: parseData.username || existingUser.username,
       dob: parseData.dob || existingUser.dob,
       email: parseData.email || existingUser.email,
-      image: image || existingUser.image,
+      profileImage: image || existingUser.profileImage,
       phoneNumber: parseData.phoneNumber || existingUser.phoneNumber, // ✅
       updatedAt: new Date(),
     },
@@ -192,7 +192,7 @@ const updateProfile = async (req: Request) => {
       id: true,
       username: true,
       email: true,
-      image: true,
+      profileImage: true,
       dob: true,
       phoneNumber: true,
       isNotification: true,
@@ -221,7 +221,7 @@ const updateUserIntoDb = async (payload: IUser, id: string) => {
       id: true,
       username: true,
       email: true,
-      image: true,
+      profileImage: true,
       role: true,
       phoneNumber: true,
       isNotification: true,
@@ -233,7 +233,7 @@ const updateUserIntoDb = async (payload: IUser, id: string) => {
   if (!result)
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to update user profile"
+      "Failed to update user profile",
     );
 
   return result;
@@ -290,7 +290,7 @@ const deleteUserFromDb = async (id: string) => {
   if (!result)
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      "Failed to delete user"
+      "Failed to delete user",
     );
 
   return result;
@@ -305,7 +305,7 @@ const getUserById = async (id: string) => {
       id: true,
       username: true,
       email: true,
-      image: true,
+      profileImage: true,
       role: true,
       phoneNumber: true,
       isNotification: true,

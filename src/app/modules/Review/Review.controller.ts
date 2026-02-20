@@ -1,15 +1,20 @@
-import httpStatus from 'http-status';
-import sendResponse from '../../utils/sendResponse';
-import catchAsync from '../../utils/catchAsync';
-import { ReviewService } from './Review.service';
+import { Request, Response } from "express";
+import catchAsync from "../../../shared/catchAsync";
+import sendResponse from "../../../shared/sendResponse";
+import { ReviewService } from "./Review.service";
+import httpStatus from "http-status";
 
-const createReview = catchAsync(async (req, res) => {
-  const result = await ReviewService.createIntoDb(req.body);
+const createReview = catchAsync(async (req: any, res: Response) => {
+  const userId = req.user.id;
+  const { courseId, rating } = req.body;
+
+  const review = await ReviewService.createIntoDb(courseId, userId, rating);
+
   sendResponse(res, {
-    statusCode: httpStatus.CREATED,
     success: true,
-    message: 'Review created successfully',
-    data: result,
+    statusCode: 201,
+    message: "Review submitted successfully",
+    data: review,
   });
 });
 
@@ -18,7 +23,7 @@ const getReviewList = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Review list retrieved successfully',
+    message: "Review list retrieved successfully",
     data: result,
   });
 });
@@ -28,7 +33,7 @@ const getReviewById = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Review details retrieved successfully',
+    message: "Review details retrieved successfully",
     data: result,
   });
 });
@@ -38,7 +43,7 @@ const updateReview = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Review updated successfully',
+    message: "Review updated successfully",
     data: result,
   });
 });
@@ -48,7 +53,7 @@ const deleteReview = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'Review deleted successfully',
+    message: "Review deleted successfully",
     data: result,
   });
 });
