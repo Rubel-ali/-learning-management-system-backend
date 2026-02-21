@@ -11,7 +11,7 @@ router.post(
   // validateRequest(CategoryValidation.createSchema),
   CategoryController.createCategoryForCourse
 );
-router.get("/categories", auth(), CategoryController.getCategoryList);
+router.get("/", auth(), CategoryController.getCategoryList);
 
 router.get("/:id", auth(), CategoryController.getCategoryById);
 

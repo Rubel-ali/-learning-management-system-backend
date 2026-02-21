@@ -335,6 +335,26 @@ const getTotalSellCount = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+/**
+ * =========================
+ * 
+ * =========================
+ */
+
+const getTotalRevenue = catchAsync(async (req: any, res: Response) => {
+  
+
+  const result = await CoursesService.getTotalRevenue();
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Total revenue for your courses fetched successfully",
+    data: result,
+  });
+});
+
 /**
  * =========================
  * EXPORT CONTROLLER
@@ -357,4 +377,6 @@ export const CoursesController = {
   buyCourse,
   getMyCourses,
   getTotalSellCount,
+
+  getTotalRevenue,
 };

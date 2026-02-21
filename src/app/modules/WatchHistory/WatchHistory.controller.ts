@@ -40,7 +40,7 @@ const getWatchHistoryById = catchAsync(async (req, res) => {
 const updateWatchHistory = catchAsync(async (req, res) => {
   const result = await WatchHistoryService.updateIntoDb(
     req.params.id,
-    req.body
+    req.body,
   );
   sendResponse(res, {
     statusCode: httpStatus.OK,

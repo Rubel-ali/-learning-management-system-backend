@@ -60,4 +60,11 @@ router.put(
 
 router.delete("/:id", auth(), CoursesController.deleteCourses);
 
+/**
+ * =========================
+ * INSTRUCTOR DASHBOARD
+ * =========================
+ */
+router.get("/revenue", auth(UserRole.INSTRUCTOR), CoursesController.getTotalRevenue);
+
 export const CoursesRoutes = router;

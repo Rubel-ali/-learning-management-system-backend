@@ -83,7 +83,7 @@ const getListFromDb = async (
     });
   }
 
-  andConditions.push({ activeStatus: "ACTIVE" });
+  andConditions.push({ activeStatus: "PUBLISHED" });
 
   if (instructorId) andConditions.push({ instructorId });
 
@@ -113,6 +113,12 @@ const getListFromDb = async (
 
   return { meta: { page, limit, total }, data: coursesWithBuyStatus };
 };
+
+/**
+ * =========================
+ * GET DRAFT COURSES LIST
+ * =========================
+ */
 
 const getInActiveListFromDb = async (
   options: IPaginationOptions,
@@ -167,9 +173,9 @@ const getInActiveListFromDb = async (
     });
   }
 
-  // ✅ Always filter only ACTIVE courses
+  // ✅ Always filter only PUBLISHED courses
   andConditions.push({
-    activeStatus: "INACTIVE",
+    activeStatus: "PUBLISHED",
   });
 
   // 🧑‍🏫 Filter by teacherId
@@ -225,6 +231,12 @@ const getInActiveListFromDb = async (
   };
 };
 
+/**
+ * =========================
+ * GET TOP REVIEWED COURSES
+ * =========================
+ */
+
 const getTopReviewedCourses = async (limit: number = 5, userId: string) => {
   const topCourseRatings = await prisma.review.groupBy({
     by: ["courseId"],
@@ -237,7 +249,7 @@ const getTopReviewedCourses = async (limit: number = 5, userId: string) => {
   if (courseIds.length === 0) return [];
 
   const courses = await prisma.courses.findMany({
-    where: { id: { in: courseIds }, activeStatus: "ACTIVE" },
+    where: { id: { in: courseIds }, activeStatus: "PUBLISHED" },
     include: {
       Enrollment: { where: { studentId: userId }, select: { id: true } },
       review: true,
@@ -278,8 +290,8 @@ const getByInActiveIdFromDb = async (id: string) => {
       category: { select: { id: true, name: true } },
     },
   });
-  if (!course || course.activeStatus !== "INACTIVE")
-    throw new ApiError(404, "Inactive course not found");
+  if (!course || course.activeStatus !== "DRAFT")
+    throw new ApiError(404, "Draft course not found");
   return course;
 };
 
@@ -346,9 +358,15 @@ const recommendCourses = async (courseId: string) => {
   });
 };
 
+/**
+ * =========================
+ * GET RECOMMENDED COURSES
+ * =========================
+ */
+
 const getRecommendedCourses = async () => {
   return await prisma.courses.findMany({
-    where: { recommended: true, activeStatus: "ACTIVE" },
+    where: { recommended: true, activeStatus: "PUBLISHED" },
     include: { user: { select: { username: true, email: true } } },
   });
 };
@@ -454,6 +472,73 @@ const buyCourse = async (
   return enrollment;
 };
 
+/**
+ * =========================
+ * GET STUDENT VIDEO PROGRESS
+ * =========================
+ */
+
+// const getStudentVideoProgress = async (studentId: string) => {
+
+/**
+ * =========================
+ * GET TOTAL REVENUE
+ * =========================
+ */
+
+const getTotalRevenue = async () => {
+  const enrollments = await prisma.enrollment.findMany({
+    include: { course: { select: { price: true } } },
+  });
+
+  const totalRevenue = enrollments.reduce(
+    (sum, e) => sum + e.course.price,
+    0
+  );
+
+  return {
+    totalRevenue,
+    totalSales: enrollments.length,
+  };
+};
+//   const enrollments = await prisma.enrollment.findMany({
+//     where: { studentId },
+//     include: { course: { select: { id: true } } },
+//   });
+
+//   const progressList = [];
+
+//   for (const enroll of enrollments) {
+//     const totalVideos = await prisma.videos.count({
+//       where: { courseId: enroll.course.id },
+//     });
+
+//     const watchedVideos = await prisma.watchHistory.count({
+//       where: {
+//         userId: studentId,
+//         video: { courseId: enroll.course.id },
+//       },
+//     });
+
+//     const progress = totalVideos ? (watchedVideos / totalVideos) * 100 : 0;
+
+//     // 🔥 AUTO COMPLETE
+//     if (progress === 100 && enroll.status === "ACTIVE") {
+//       await prisma.enrollment.update({
+//         where: { id: enroll.id },
+//         data: { status: "COMPLETED" },
+//       });
+//     }
+
+//     progressList.push({
+//       courseId: enroll.course.id,
+//       progress: Number(progress.toFixed(2)),
+//     });
+//   }
+
+//   return progressList;
+// };
+
 export const CoursesService = {
   createIntoDb,
   getListFromDb,
@@ -475,4 +560,7 @@ export const CoursesService = {
   // my courses
   getMyPurchasedCourses,
   buyCourse,
+
+  // get student revenue
+  getTotalRevenue,
 };
